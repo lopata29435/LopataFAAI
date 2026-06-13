@@ -65,9 +65,9 @@ npm run dev
    docker compose up -d
    # миграции и сид применятся автоматически (AUTO_MIGRATE / AUTO_SEED)
    ```
-4. **Доступ через тайнет** (порт из реестра — 8001):
+4. **Доступ через тайнет** (`APP_PORT`, по умолчанию **8002** — 8001 занят kitchen-приложением):
    ```bash
-   sudo tailscale serve --bg --https=8001 http://127.0.0.1:8001
+   sudo tailscale serve --bg --https=8002 http://127.0.0.1:8002
    ```
    UI наружу не торчит — только в tailnet.
 
