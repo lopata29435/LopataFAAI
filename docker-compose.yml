@@ -12,6 +12,8 @@ services:
     extra_hosts:
       # lets LEMONADE_BASE_URL=http://host.docker.internal:<port> reach the host
       - "host.docker.internal:host-gateway"
+      # so the container can reach ZITADEL's tailnet issuer for OIDC discovery/token
+      - "desktop-8pn4dpm.tail8f5bb5.ts.net:100.72.210.71"
     ports:
       # localhost only; exposed via tailscale serve. Host port = APP_PORT (default 8002;
       # 8001 is taken by the kitchen app). Expose with:
