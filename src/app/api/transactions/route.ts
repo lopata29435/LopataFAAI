@@ -5,16 +5,22 @@ import { getDb, schema } from "@/db";
 
 export const dynamic = "force-dynamic";
 
-const CreateTx = z.object({
-  accountId: z.string().uuid(),
-  amountMinor: z.number().int().positive(),
-  type: z.enum(["expense", "income", "transfer"]).default("expense"),
-  categoryId: z.string().uuid().nullable().optional(),
-  datetime: z.string().datetime().optional(),
-  note: z.string().max(500).nullable().optional(),
-  currency: z.string().length(3).optional(),
-  source: z.enum(["manual", "ai", "import", "recurring"]).default("manual"),
-});
+const CreateTx = z
+  .object({
+    accountId: z.string().uuid(),
+    amountMinor: z.number().int().positive(),
+    type: z.enum(["expense", "income", "transfer"]).default("expense"),
+    categoryId: z.string().uuid().nullable().optional(),
+    counterAccountId: z.string().uuid().nullable().optional(),
+    datetime: z.string().datetime().optional(),
+    note: z.string().max(500).nullable().optional(),
+    currency: z.string().length(3).optional(),
+    source: z.enum(["manual", "ai", "import", "recurring"]).default("manual"),
+  })
+  .refine((d) => d.type !== "transfer" || (!!d.counterAccountId && d.counterAccountId !== d.accountId), {
+    message: "Перевод требует другой счёт назначения",
+    path: ["counterAccountId"],
+  });
 
 async function defaultUserId(db: ReturnType<typeof getDb>) {
   const [u] = await db.select({ id: schema.users.id }).from(schema.users).limit(1);
@@ -30,6 +36,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const d = parsed.data;
+  const isTransfer = d.type === "transfer";
   const userId = await defaultUserId(db);
 
   const [row] = await db
@@ -39,7 +46,8 @@ export async function POST(req: Request) {
       userId,
       amountMinor: d.amountMinor,
       type: d.type,
-      categoryId: d.categoryId ?? null,
+      categoryId: isTransfer ? null : d.categoryId ?? null,
+      counterAccountId: isTransfer ? d.counterAccountId ?? null : null,
       datetime: d.datetime ? new Date(d.datetime) : new Date(),
       note: d.note ?? null,
       currency: d.currency ?? process.env.BASE_CURRENCY ?? "RUB",

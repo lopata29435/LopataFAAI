@@ -130,3 +130,45 @@ h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: v
 .msg { font-size: 14px; padding: 8px 0; }
 .msg.ok { color: var(--income); }
 .msg.err { color: var(--danger); }
+
+/* account balances strip */
+.accounts-strip { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 4px; }
+.acct {
+  flex: 0 0 auto; min-width: 120px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 12px;
+}
+.acct.total { background: var(--surface-2); }
+.acct-bal { font-weight: 700; font-size: 16px; margin-top: 2px; }
+
+/* clickable list rows */
+.list-item.as-button {
+  width: 100%; text-align: left; font: inherit; color: inherit;
+  background: transparent; border: none; border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.list-item.as-button:last-child { border-bottom: none; }
+.list-item.as-button:active { background: var(--surface-2); }
+.amount-transfer { font-weight: 600; color: var(--muted); }
+
+/* edit modal */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(0, 0, 0, .5);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.modal {
+  width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 18px 18px 0 0; padding: 16px 14px 22px;
+}
+@media (min-width: 600px) {
+  .modal-backdrop { align-items: center; }
+  .modal { border-radius: 18px; }
+}
+.icon-btn {
+  width: 32px; height: 32px; border: none; cursor: pointer;
+  background: var(--surface-2); color: var(--text); border-radius: 8px; font-size: 15px;
+}
+.btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--border); }
+label.muted { display: block; margin-bottom: 4px; }

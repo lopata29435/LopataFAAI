@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { parseAmountToMinor } from "@/lib/money";
 
 type Account = { id: string; name: string; currency: string };
-type Category = { id: string; name: string; icon: string | null; kind: string; parentId: string | null };
+type Category = { id: string; name: string; icon: string | null; kind: string };
+type TxType = "expense" | "income" | "transfer";
 
 export function EntryForm({
   accounts,
@@ -18,34 +19,40 @@ export function EntryForm({
 }) {
   const router = useRouter();
   const [amount, setAmount] = useState("");
+  const [type, setType] = useState<TxType>("expense");
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
-  const [type, setType] = useState<"expense" | "income">("expense");
+  const [counterAccountId, setCounterAccountId] = useState(accounts[1]?.id ?? accounts[0]?.id ?? "");
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [smart, setSmart] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; kind: "ok" | "err" } | null>(null);
 
-  // Leaf categories of the current type (parents are just groupings here).
-  const visibleCats = useMemo(() => {
-    const sameType = categories.filter((c) => c.kind === type);
-    const hasChildren = new Set(sameType.filter((c) => c.parentId).map((c) => c.parentId));
-    return sameType.filter((c) => !hasChildren.has(c.id));
-  }, [categories, type]);
+  const visibleCats = useMemo(
+    () => (type === "transfer" ? [] : categories.filter((c) => c.kind === type)),
+    [categories, type],
+  );
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const minor = parseAmountToMinor(amount);
     if (!minor || minor <= 0) return setMsg({ text: "Укажи сумму", kind: "err" });
     if (!accountId) return setMsg({ text: "Выбери счёт", kind: "err" });
+    if (type === "transfer" && (!counterAccountId || counterAccountId === accountId)) {
+      return setMsg({ text: "Выбери другой счёт назначения", kind: "err" });
+    }
 
     setBusy(true);
     setMsg(null);
     try {
+      const payload =
+        type === "transfer"
+          ? { accountId, counterAccountId, amountMinor: minor, type, note: note || null }
+          : { accountId, amountMinor: minor, type, categoryId, note: note || null };
       const res = await fetch("/api/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accountId, amountMinor: minor, type, categoryId, note: note || null }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error();
       setAmount("");
@@ -96,7 +103,7 @@ export function EntryForm({
   return (
     <form className="card" onSubmit={submit}>
       {aiEnabled && (
-        <div className="row mt" style={{ marginTop: 0 }}>
+        <div className="row">
           <input
             className="smart-input grow"
             placeholder="Напиши строкой: «такси 450 вчера»"
@@ -124,36 +131,61 @@ export function EntryForm({
         onChange={(e) => setAmount(e.target.value)}
       />
 
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <div className="seg">
-          <button type="button" className={type === "expense" ? "active" : ""} onClick={() => setType("expense")}>
-            Расход
-          </button>
-          <button type="button" className={type === "income" ? "active" : ""} onClick={() => setType("income")}>
-            Доход
-          </button>
-        </div>
-        <select className="text-input" style={{ width: "auto" }} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </select>
+      <div className="seg">
+        <button type="button" className={type === "expense" ? "active" : ""} onClick={() => setType("expense")}>
+          Расход
+        </button>
+        <button type="button" className={type === "income" ? "active" : ""} onClick={() => setType("income")}>
+          Доход
+        </button>
+        <button type="button" className={type === "transfer" ? "active" : ""} onClick={() => setType("transfer")}>
+          Перевод
+        </button>
       </div>
 
-      <div className="chips mt">
-        {visibleCats.map((c) => (
-          <button
-            type="button"
-            key={c.id}
-            className={"chip" + (categoryId === c.id ? " active" : "")}
-            onClick={() => setCategoryId(categoryId === c.id ? null : c.id)}
-          >
-            {(c.icon ? c.icon + " " : "") + c.name}
-          </button>
-        ))}
+      <div className="row mt">
+        <div className="grow">
+          <label className="muted small">{type === "transfer" ? "Со счёта" : "Счёт"}</label>
+          <select className="text-input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {type === "transfer" && (
+          <div className="grow">
+            <label className="muted small">На счёт</label>
+            <select
+              className="text-input"
+              value={counterAccountId}
+              onChange={(e) => setCounterAccountId(e.target.value)}
+            >
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
+
+      {type !== "transfer" && (
+        <div className="chips mt">
+          {visibleCats.map((c) => (
+            <button
+              type="button"
+              key={c.id}
+              className={"chip" + (categoryId === c.id ? " active" : "")}
+              onClick={() => setCategoryId(categoryId === c.id ? null : c.id)}
+            >
+              {(c.icon ? c.icon + " " : "") + c.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <input
         className="text-input mt"
@@ -165,7 +197,7 @@ export function EntryForm({
       {msg && <div className={"msg " + (msg.kind === "ok" ? "ok" : "err")}>{msg.text}</div>}
 
       <button type="submit" className="btn btn-primary mt" disabled={busy}>
-        {busy ? "…" : "Добавить"}
+        {busy ? "…" : type === "transfer" ? "Перевести" : "Добавить"}
       </button>
     </form>
   );

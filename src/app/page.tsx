@@ -1,8 +1,11 @@
 import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { getDb, schema } from "@/db";
+import { getAccountsWithBalances } from "@/lib/balances";
 import { formatMinor } from "@/lib/money";
 import { isAiEnabled } from "@/lib/lemonade";
 import { EntryForm } from "@/components/EntryForm";
+import { TxList } from "@/components/TxList";
 
 export const dynamic = "force-dynamic";
 
@@ -16,13 +19,11 @@ function startOfMonth(): Date {
 export default async function Home() {
   const db = getDb();
 
-  const accounts = await db
-    .select({ id: schema.accounts.id, name: schema.accounts.name, currency: schema.accounts.currency })
-    .from(schema.accounts)
-    .where(eq(schema.accounts.isArchived, false))
-    .orderBy(schema.accounts.sortOrder);
+  const balances = await getAccountsWithBalances();
+  const totalMinor = balances.reduce((a, b) => a + b.balanceMinor, 0);
+  const accountsForForms = balances.map((b) => ({ id: b.id, name: b.name, currency: b.currency }));
 
-  const categories = await db
+  const allCats = await db
     .select({
       id: schema.categories.id,
       name: schema.categories.name,
@@ -34,8 +35,13 @@ export default async function Home() {
     .from(schema.categories)
     .where(eq(schema.categories.isArchived, false))
     .orderBy(schema.categories.sortOrder);
+  const parentIds = new Set(allCats.filter((c) => c.parentId).map((c) => c.parentId));
+  const leafCategories = allCats
+    .filter((c) => c.kind !== "transfer" && !parentIds.has(c.id))
+    .map((c) => ({ id: c.id, name: c.name, icon: c.icon, kind: c.kind }));
 
-  const recent = await db
+  const counterAcc = alias(schema.accounts, "counter_acc");
+  const recentRaw = await db
     .select({
       id: schema.transactions.id,
       amountMinor: schema.transactions.amountMinor,
@@ -43,16 +49,22 @@ export default async function Home() {
       type: schema.transactions.type,
       datetime: schema.transactions.datetime,
       note: schema.transactions.note,
+      categoryId: schema.transactions.categoryId,
+      accountId: schema.transactions.accountId,
+      counterAccountId: schema.transactions.counterAccountId,
       categoryName: schema.categories.name,
       categoryIcon: schema.categories.icon,
       accountName: schema.accounts.name,
+      counterAccountName: counterAcc.name,
     })
     .from(schema.transactions)
     .leftJoin(schema.categories, eq(schema.categories.id, schema.transactions.categoryId))
     .leftJoin(schema.accounts, eq(schema.accounts.id, schema.transactions.accountId))
+    .leftJoin(counterAcc, eq(counterAcc.id, schema.transactions.counterAccountId))
     .where(isNull(schema.transactions.deletedAt))
     .orderBy(desc(schema.transactions.datetime))
-    .limit(25);
+    .limit(30);
+  const recent = recentRaw.map((r) => ({ ...r, datetime: r.datetime.toISOString() }));
 
   const summary = await db
     .select({
@@ -71,7 +83,6 @@ export default async function Home() {
     )
     .groupBy(schema.categories.name, schema.categories.icon)
     .orderBy(desc(sql`sum(${schema.transactions.amountMinor})`));
-
   const summaryRows = summary.map((s) => ({
     name: s.categoryName ?? "Без категории",
     icon: s.categoryIcon ?? "•",
@@ -83,11 +94,22 @@ export default async function Home() {
     <main className="container">
       <h1>Финансы</h1>
 
-      <EntryForm
-        accounts={accounts}
-        categories={categories.filter((c) => c.kind !== "transfer")}
-        aiEnabled={isAiEnabled()}
-      />
+      <EntryForm accounts={accountsForForms} categories={leafCategories} aiEnabled={isAiEnabled()} />
+
+      <div className="accounts-strip mt">
+        {balances.map((b) => (
+          <div className="acct" key={b.id}>
+            <div className="acct-name muted small">{b.name}</div>
+            <div className="acct-bal">{formatMinor(b.balanceMinor, b.currency)}</div>
+          </div>
+        ))}
+        {balances.length > 1 && (
+          <div className="acct total">
+            <div className="acct-name muted small">Всего</div>
+            <div className="acct-bal">{formatMinor(totalMinor)}</div>
+          </div>
+        )}
+      </div>
 
       <h2>Этот месяц · {formatMinor(monthTotal)}</h2>
       <div className="card">
@@ -104,33 +126,17 @@ export default async function Home() {
                   style={{ width: `${monthTotal ? Math.round((s.total / monthTotal) * 100) : 0}%` }}
                 />
               </span>
-              <span className="small right" style={{ minWidth: 90 }}>{formatMinor(s.total)}</span>
+              <span className="small right" style={{ minWidth: 90 }}>
+                {formatMinor(s.total)}
+              </span>
             </div>
           ))
         )}
       </div>
 
       <h2>Последние операции</h2>
-      <div className="card list">
-        {recent.length === 0 ? (
-          <div className="muted small">Записей пока нет — добавь первую сверху.</div>
-        ) : (
-          recent.map((t) => (
-            <div className="list-item" key={t.id}>
-              <div>
-                <div>{(t.categoryIcon ?? "•") + " " + (t.categoryName ?? "Без категории")}</div>
-                <div className="muted small">
-                  {new Date(t.datetime).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
-                  {t.accountName ? ` · ${t.accountName}` : ""}
-                  {t.note ? ` · ${t.note}` : ""}
-                </div>
-              </div>
-              <div className={t.type === "income" ? "amount-in" : "amount-out"}>
-                {(t.type === "income" ? "+" : "−") + formatMinor(t.amountMinor, t.currency)}
-              </div>
-            </div>
-          ))
-        )}
+      <div className="card">
+        <TxList rows={recent} accounts={accountsForForms} categories={leafCategories} />
       </div>
     </main>
   );

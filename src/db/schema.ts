@@ -80,6 +80,7 @@ export const transactions = pgTable("transactions", {
   amountMinor: bigint("amount_minor", { mode: "number" }).notNull(),
   currency: char("currency", { length: 3 }).notNull().default("RUB"),
   categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
+  counterAccountId: uuid("counter_account_id").references(() => accounts.id, { onDelete: "set null" }),
   type: txType("type").notNull().default("expense"),
   counterparty: text("counterparty"),
   note: text("note"),
