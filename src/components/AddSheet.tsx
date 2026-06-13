@@ -111,86 +111,89 @@ export function AddSheet({
 
   return (
     <div className="backdrop" onClick={onClose}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+      <div className="sheet sheet-calc" onClick={(e) => e.stopPropagation()}>
         <div className="grab" />
         <div className="sheet-head">
           <div className="t">Новая операция</div>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Закрыть">✕</button>
         </div>
 
-        {aiEnabled && (
-          <div className="row">
-            <input
-              className="input grow"
-              placeholder="Строкой: «такси 450 вчера»"
-              value={smart}
-              onChange={(e) => setSmart(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), runSmart())}
-            />
-            <button type="button" className="btn" disabled={busy} onClick={runSmart}>AI</button>
+        {/* Settings — scroll above the pinned amount + numpad */}
+        <div className="sheet-scroll">
+          {aiEnabled && (
+            <div className="row">
+              <input
+                className="input grow"
+                placeholder="Строкой: «такси 450 вчера»"
+                value={smart}
+                onChange={(e) => setSmart(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), runSmart())}
+              />
+              <button type="button" className="btn" disabled={busy} onClick={runSmart}>AI</button>
+            </div>
+          )}
+
+          <div className="seg" style={{ marginTop: aiEnabled ? 12 : 2 }}>
+            <button type="button" className={type === "expense" ? "active" : ""} onClick={() => setType("expense")}>Расход</button>
+            <button type="button" className={type === "income" ? "active" : ""} onClick={() => setType("income")}>Доход</button>
+            <button type="button" className={type === "transfer" ? "active" : ""} onClick={() => setType("transfer")}>Перевод</button>
           </div>
-        )}
 
-        <div className="amount-display">
-          <div className="annot">Сумма</div>
-          <div className="v num">{displayAmount(amount)} <small>₽</small></div>
-        </div>
-
-        <div className="seg">
-          <button type="button" className={type === "expense" ? "active" : ""} onClick={() => setType("expense")}>Расход</button>
-          <button type="button" className={type === "income" ? "active" : ""} onClick={() => setType("income")}>Доход</button>
-          <button type="button" className={type === "transfer" ? "active" : ""} onClick={() => setType("transfer")}>Перевод</button>
-        </div>
-
-        <div className="row mt">
-          <div className="field grow" style={{ marginTop: 0 }}>
-            <label>{type === "transfer" ? "Со счёта" : "Счёт"}</label>
-            <select className="input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
-          </div>
-          {type === "transfer" && (
+          <div className="row mt">
             <div className="field grow" style={{ marginTop: 0 }}>
-              <label>На счёт</label>
-              <select className="input" value={counterAccountId} onChange={(e) => setCounterAccountId(e.target.value)}>
+              <label>{type === "transfer" ? "Со счёта" : "Счёт"}</label>
+              <select className="input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
                 {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </div>
-          )}
-        </div>
-
-        {type !== "transfer" && (
-          <div className="chips mt">
-            {cats.map((c) => (
-              <button
-                type="button"
-                key={c.id}
-                className={"cchip" + (categoryId === c.id ? " on" : "")}
-                onClick={() => setCategoryId(categoryId === c.id ? null : c.id)}
-              >
-                <span>{(c.icon ? c.icon + " " : "") + c.name}</span>
-              </button>
-            ))}
+            {type === "transfer" && (
+              <div className="field grow" style={{ marginTop: 0 }}>
+                <label>На счёт</label>
+                <select className="input" value={counterAccountId} onChange={(e) => setCounterAccountId(e.target.value)}>
+                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+            )}
           </div>
-        )}
 
-        <input className="input mt" placeholder="Заметка (необязательно)" value={note} onChange={(e) => setNote(e.target.value)} />
-
-        <div className="numpad">
-          {[["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], [",", "0", "⌫"]].map((row, i) => (
-            <div className="row" key={i}>
-              {row.map((k) => (
-                <button type="button" className="key" key={k} onClick={() => key(k)}>{k}</button>
+          {type !== "transfer" && (
+            <div className="chips mt">
+              {cats.map((c) => (
+                <button
+                  type="button"
+                  key={c.id}
+                  className={"cchip" + (categoryId === c.id ? " on" : "")}
+                  onClick={() => setCategoryId(categoryId === c.id ? null : c.id)}
+                >
+                  <span>{(c.icon ? c.icon + " " : "") + c.name}</span>
+                </button>
               ))}
             </div>
-          ))}
+          )}
+
+          <input className="input mt" placeholder="Заметка (необязательно)" value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
 
-        {msg && <div className={"msg " + msg.kind}>{msg.text}</div>}
-
-        <button type="button" className="btn btn-primary mt" disabled={busy} onClick={submit}>
-          {busy ? "…" : type === "transfer" ? "Перевести" : "Сохранить"}
-        </button>
+        {/* Pinned bottom: amount sits right above the numpad */}
+        <div className="sheet-pad">
+          {msg && <div className={"msg " + msg.kind} style={{ padding: "2px 2px 4px" }}>{msg.text}</div>}
+          <div className="amount-display">
+            <div className="annot">Сумма</div>
+            <div className="v num">{displayAmount(amount)} <small>₽</small></div>
+          </div>
+          <div className="numpad">
+            {[["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], [",", "0", "⌫"]].map((row, i) => (
+              <div className="row" key={i}>
+                {row.map((k) => (
+                  <button type="button" className="key" key={k} onClick={() => key(k)}>{k}</button>
+                ))}
+              </div>
+            ))}
+          </div>
+          <button type="button" className="btn btn-primary mt" disabled={busy} onClick={submit}>
+            {busy ? "…" : type === "transfer" ? "Перевести" : "Сохранить"}
+          </button>
+        </div>
       </div>
     </div>
   );
