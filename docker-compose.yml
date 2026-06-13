@@ -1,0 +1,21 @@
+# Production deploy on the home server.
+# Reuses the existing Postgres on the shared "edge" network (host "postgres").
+# Pull image:  docker compose pull && docker compose up -d
+services:
+  finance:
+    image: ${FINANCE_IMAGE:-ghcr.io/CHANGE_ME/finance-app:latest}
+    container_name: finance
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - edge
+    extra_hosts:
+      # lets LEMONADE_BASE_URL=http://host.docker.internal:<port> reach the host
+      - "host.docker.internal:host-gateway"
+    ports:
+      # bind to localhost only; expose via: tailscale serve --bg --https=8001 http://127.0.0.1:8001
+      - "127.0.0.1:8001:3000"
+
+networks:
+  edge:
+    external: true

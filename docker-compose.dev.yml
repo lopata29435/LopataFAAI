@@ -1,0 +1,33 @@
+# Local development: builds the image and runs a throwaway Postgres.
+# Usage:  cp .env.dev.example .env.dev  &&  docker compose -f docker-compose.dev.yml up --build
+services:
+  finance:
+    build: .
+    container_name: finance-dev
+    env_file: .env.dev
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: finance
+      POSTGRES_PASSWORD: finance
+      POSTGRES_DB: finance
+    ports:
+      - "5433:5432"
+    volumes:
+      - financepg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finance"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  financepg:

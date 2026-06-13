@@ -1,0 +1,73 @@
+[
+  {
+    "slug": "food", "name": "Еда и продукты", "icon": "🛒", "kind": "expense", "sort": 0,
+    "children": [
+      { "slug": "groceries", "name": "Продукты", "icon": "🥦" },
+      { "slug": "cafe", "name": "Кафе и рестораны", "icon": "🍽️" },
+      { "slug": "delivery", "name": "Доставка еды", "icon": "🛵" },
+      { "slug": "coffee", "name": "Кофе и перекусы", "icon": "☕" }
+    ]
+  },
+  {
+    "slug": "transport", "name": "Транспорт", "icon": "🚗", "kind": "expense", "sort": 1,
+    "children": [
+      { "slug": "taxi", "name": "Такси", "icon": "🚕" },
+      { "slug": "public_transport", "name": "Общественный транспорт", "icon": "🚌" },
+      { "slug": "fuel", "name": "Бензин", "icon": "⛽" },
+      { "slug": "car", "name": "Авто: обслуживание", "icon": "🔧" },
+      { "slug": "parking", "name": "Парковка", "icon": "🅿️" }
+    ]
+  },
+  {
+    "slug": "housing", "name": "Жильё", "icon": "🏠", "kind": "expense", "sort": 2,
+    "children": [
+      { "slug": "rent", "name": "Аренда / ипотека", "icon": "🔑" },
+      { "slug": "utilities", "name": "Коммуналка", "icon": "💡" },
+      { "slug": "internet", "name": "Интернет и связь", "icon": "📶" },
+      { "slug": "household", "name": "Товары для дома", "icon": "🧺" }
+    ]
+  },
+  {
+    "slug": "health", "name": "Здоровье", "icon": "🩺", "kind": "expense", "sort": 3,
+    "children": [
+      { "slug": "pharmacy", "name": "Аптека", "icon": "💊" },
+      { "slug": "doctor", "name": "Врачи и анализы", "icon": "🏥" },
+      { "slug": "sport", "name": "Спорт и фитнес", "icon": "🏋️" }
+    ]
+  },
+  {
+    "slug": "shopping", "name": "Покупки", "icon": "🛍️", "kind": "expense", "sort": 4,
+    "children": [
+      { "slug": "clothes", "name": "Одежда и обувь", "icon": "👕" },
+      { "slug": "electronics", "name": "Электроника", "icon": "📱" },
+      { "slug": "beauty", "name": "Красота и уход", "icon": "💅" }
+    ]
+  },
+  {
+    "slug": "entertainment", "name": "Развлечения", "icon": "🎮", "kind": "expense", "sort": 5,
+    "children": [
+      { "slug": "subscriptions", "name": "Подписки", "icon": "🔁" },
+      { "slug": "movies_games", "name": "Кино, игры, события", "icon": "🎬" },
+      { "slug": "hobby", "name": "Хобби", "icon": "🎨" },
+      { "slug": "bar", "name": "Бар и алкоголь", "icon": "🍺" }
+    ]
+  },
+  { "slug": "education", "name": "Образование", "icon": "📚", "kind": "expense", "sort": 6 },
+  { "slug": "travel", "name": "Путешествия", "icon": "✈️", "kind": "expense", "sort": 7 },
+  { "slug": "gifts", "name": "Подарки", "icon": "🎁", "kind": "expense", "sort": 8 },
+  { "slug": "kids", "name": "Дети", "icon": "🧸", "kind": "expense", "sort": 9 },
+  { "slug": "pets", "name": "Питомцы", "icon": "🐾", "kind": "expense", "sort": 10 },
+  { "slug": "fees", "name": "Комиссии и платежи", "icon": "🧾", "kind": "expense", "sort": 11 },
+  { "slug": "taxes", "name": "Налоги", "icon": "🏛️", "kind": "expense", "sort": 12 },
+  { "slug": "other_expense", "name": "Прочее", "icon": "•", "kind": "expense", "sort": 99 },
+
+  { "slug": "salary", "name": "Зарплата", "icon": "💼", "kind": "income", "sort": 0 },
+  { "slug": "bonus", "name": "Премия", "icon": "🎯", "kind": "income", "sort": 1 },
+  { "slug": "freelance", "name": "Подработка", "icon": "🧑‍💻", "kind": "income", "sort": 2 },
+  { "slug": "investment_income", "name": "Доход от инвестиций", "icon": "📈", "kind": "income", "sort": 3 },
+  { "slug": "gift_income", "name": "Подарок / перевод", "icon": "💝", "kind": "income", "sort": 4 },
+  { "slug": "refund", "name": "Возврат", "icon": "↩️", "kind": "income", "sort": 5 },
+  { "slug": "other_income", "name": "Прочий доход", "icon": "•", "kind": "income", "sort": 99 },
+
+  { "slug": "transfer", "name": "Перевод между счетами", "icon": "🔄", "kind": "transfer", "sort": 0 }
+]

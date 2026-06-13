@@ -1,0 +1,21 @@
+node_modules
+.next
+out
+build
+dist
+
+# env
+.env
+.env.local
+.env.dev
+.env*.local
+
+# next
+next-env.d.ts
+*.tsbuildinfo
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea
+.vscode
