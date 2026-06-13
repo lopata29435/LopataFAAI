@@ -19,34 +19,34 @@ export function TxList({
   const [editing, setEditing] = useState<EditableTx | null>(null);
 
   if (rows.length === 0) {
-    return <div className="muted small">Записей пока нет — добавь первую сверху.</div>;
+    return <div className="muted" style={{ fontSize: 13, padding: "8px 6px" }}>Записей пока нет — нажми + внизу.</div>;
   }
 
   return (
     <>
-      <div className="list">
-        {rows.map((t) => {
-          const isTransfer = t.type === "transfer";
-          const title = isTransfer
-            ? `🔄 ${t.accountName ?? "—"} → ${t.counterAccountName ?? "—"}`
-            : `${t.categoryIcon ?? "•"} ${t.categoryName ?? "Без категории"}`;
-          const sign = t.type === "income" ? "+" : t.type === "expense" ? "−" : "";
-          const cls = t.type === "income" ? "amount-in" : isTransfer ? "amount-transfer" : "amount-out";
-          return (
-            <button type="button" className="list-item as-button" key={t.id} onClick={() => setEditing(t)}>
-              <div>
-                <div>{title}</div>
-                <div className="muted small">
-                  {new Date(t.datetime).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
-                  {!isTransfer && t.accountName ? ` · ${t.accountName}` : ""}
-                  {t.note ? ` · ${t.note}` : ""}
-                </div>
-              </div>
-              <div className={cls}>{sign + formatMinor(t.amountMinor, t.currency)}</div>
-            </button>
-          );
-        })}
-      </div>
+      {rows.map((t) => {
+        const isTransfer = t.type === "transfer";
+        const icon = isTransfer ? "🔄" : t.categoryIcon ?? "•";
+        const label = isTransfer ? "Перевод" : t.categoryName ?? "Без категории";
+        const sub = isTransfer
+          ? `${t.accountName ?? "—"} → ${t.counterAccountName ?? "—"}`
+          : [t.accountName, t.note].filter(Boolean).join(" · ");
+        const sign = t.type === "income" ? "+" : t.type === "expense" ? "−" : "";
+        const cls = t.type === "income" ? "in" : isTransfer ? "tr" : "out";
+        return (
+          <button type="button" className="txn" key={t.id} onClick={() => setEditing(t)}>
+            <span className="ic">{icon}</span>
+            <span className="body">
+              <span className="label" style={{ display: "block" }}>{label}</span>
+              <span className="cat" style={{ display: "block" }}>{sub || "—"}</span>
+            </span>
+            <span className={"amt num " + cls}>
+              {sign}
+              {formatMinor(t.amountMinor, t.currency)}
+            </span>
+          </button>
+        );
+      })}
       {editing && (
         <EditTxModal
           tx={editing}

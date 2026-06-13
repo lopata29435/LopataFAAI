@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<title>Finance App · Wireframes v2 (dark)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #0F1715; overflow: hidden; }
+  body { font-family: Roboto, system-ui, sans-serif; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="android-frame.jsx"></script>
+<script type="text/babel" src="browser-window.jsx"></script>
+<script type="text/babel" src="wf-primitives.jsx"></script>
+<!-- dark overrides must run AFTER primitives but BEFORE any render -->
+<script type="text/babel" src="wf-dark.jsx"></script>
+<script type="text/babel" src="wf-dashboards.jsx"></script>
+<script type="text/babel" src="wf-combined-dash.jsx"></script>
+<script type="text/babel" src="wf-screens.jsx"></script>
+<script type="text/babel" src="wf-web.jsx"></script>
+
+<script type="text/babel">
+const PHONE_W = 412;
+const PHONE_H = 892;
+const FRAME_W = PHONE_W + 12;
+const FRAME_H = PHONE_H + 12;
+
+// Phone wrapper — dark device chrome to match the content theme.
+function Phone({ children }) {
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: WF.bg,
+    }}>
+      <AndroidDevice width={PHONE_W} height={PHONE_H} dark>
+        {children}
+      </AndroidDevice>
+    </div>
+  );
+}
+
+// Browser wrapper for web view.
+const WEB_W = 1280;
+const WEB_H = 820;
+function WebWindow({ children }) {
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: WF.bg, padding: 12, boxSizing: 'border-box',
+    }}>
+      <ChromeWindow
+        tabs={[{ title: 'Копилка · Финансы' }, { title: 'Tinkoff' }]}
+        activeIndex={0}
+        url="kopilka.app/dashboard"
+        width={WEB_W - 24} height={WEB_H - 24}
+      >
+        {children}
+      </ChromeWindow>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas>
+      {/* Intro / design system */}
+      <DCSection
+        id="intro"
+        title="v2 · тёмная тема + веб"
+        subtitle="V5 = V3 + V4 (мотивирующий герой + плотная аналитика). Android + Web."
+      >
+        <DCArtboard id="legend" label="Дизайн-система · dark" width={560} height={460}>
+          <div style={{ padding: 32, background: WF.surface, color: WF.text, height: '100%', boxSizing: 'border-box', fontFamily: 'Roboto, system-ui, sans-serif', overflow: 'hidden' }}>
+            <div style={{ fontSize: 11, color: WF.textMute, fontFamily: WF.mono, letterSpacing: 0.5, textTransform: 'uppercase' }}>Wireframe system · dark</div>
+            <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: -0.3, marginTop: 4, marginBottom: 16 }}>
+              Material 3 · тёмная палитра
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, fontSize: 12 }}>
+              <div>
+                <div style={{ fontWeight: 600, marginBottom: 8, color: WF.text }}>Палитра</div>
+                {[
+                  ['#0F1715', 'BG · canvas'],
+                  ['#171F1D', 'Surface'],
+                  ['#1F2A28', 'Card'],
+                  ['#83D5C6', 'Primary · teal'],
+                  ['#1F4A45', 'Primary soft'],
+                  ['#FFB59A', 'Goals · warm'],
+                  ['#4A2B1C', 'Goals soft'],
+                  ['#7DD9A0', 'Positive'],
+                ].map(([c, n]) => (
+                  <div key={c} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <div style={{ width: 18, height: 18, borderRadius: 4, background: c, border: '1px solid rgba(255,255,255,0.05)' }} />
+                    <div style={{ fontFamily: WF.mono, fontSize: 10, color: WF.textMute }}>{c}</div>
+                    <div style={{ color: WF.text }}>{n}</div>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, marginBottom: 8, color: WF.text }}>Принципы</div>
+                <ul style={{ paddingLeft: 16, margin: 0, color: WF.text, lineHeight: 1.55, fontSize: 12 }}>
+                  <li>Контраст 4.5:1 минимум для текста</li>
+                  <li>Card на 1 уровень светлее surface</li>
+                  <li>Акцент teal — действия и активное состояние</li>
+                  <li>Warm orange — цели и мотивация</li>
+                  <li>Зелёный — положительная динамика</li>
+                  <li>Material You · 16–20px радиусы карточек</li>
+                </ul>
+
+                <div style={{ fontWeight: 600, marginTop: 14, marginBottom: 6, color: WF.text }}>Платформы</div>
+                <div style={{ fontSize: 12, color: WF.textMute, lineHeight: 1.5 }}>
+                  Android: bottom nav + FAB<br />
+                  Web: левый sidebar + top bar<br />
+                  Общая дизайн-система компонентов
+                </div>
+              </div>
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* V5 — combined mobile dashboard */}
+      <DCSection
+        id="dashboard"
+        title="Главный экран · мобильный"
+        subtitle="V5 = мотивирующий герой цели + плотная аналитика"
+      >
+        <DCArtboard id="v5" label="V5 · Цели + плотная" width={FRAME_W} height={FRAME_H}>
+          <Phone><DashV5 /></Phone>
+        </DCArtboard>
+      </DCSection>
+
+      {/* Web/desktop dashboard */}
+      <DCSection
+        id="web"
+        title="Веб-версия · Главный экран"
+        subtitle="1280×800 · sidebar + top bar + dashboard grid"
+      >
+        <DCArtboard id="web-1" label="Десктоп · дашборд" width={WEB_W} height={WEB_H}>
+          <WebWindow><WebDashboard /></WebWindow>
+        </DCArtboard>
+      </DCSection>
+
+      {/* Supporting mobile screens — all in dark */}
+      <DCSection
+        id="add"
+        title="Добавление траты"
+        subtitle="Нумпад · чипы категорий · выбор счёта"
+      >
+        <DCArtboard id="add-1" label="Numpad-flow" width={FRAME_W} height={FRAME_H}>
+          <Phone><AddExpenseScreen /></Phone>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="txns"
+        title="История транзакций"
+        subtitle="Поиск, фильтры, группировка по дате"
+      >
+        <DCArtboard id="txns-1" label="Список с днями" width={FRAME_W} height={FRAME_H}>
+          <Phone><TransactionsScreen /></Phone>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="analytics"
+        title="Аналитика"
+        subtitle="Donut по категориям · тренд · доход/расход за 6 мес"
+      >
+        <DCArtboard id="an-1" label="Месячный отчёт" width={FRAME_W} height={FRAME_H}>
+          <Phone><AnalyticsScreen /></Phone>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="goals"
+        title="Копилки и цели"
+        subtitle="Мотивирующие карточки с прогрессом и сроками"
+      >
+        <DCArtboard id="g-1" label="Список целей" width={FRAME_W} height={FRAME_H}>
+          <Phone><GoalsScreen /></Phone>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="budget"
+        title="Бюджет на месяц"
+        subtitle="Общий лимит + лимиты по категориям"
+      >
+        <DCArtboard id="b-1" label="Лимиты по категориям" width={FRAME_W} height={FRAME_H}>
+          <Phone><BudgetScreen /></Phone>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="accounts"
+        title="Счета и карты"
+        subtitle="Карты, наличные, депозиты, инвестиции"
+      >
+        <DCArtboard id="a-1" label="Стек карт" width={FRAME_W} height={FRAME_H}>
+          <Phone><AccountsScreen /></Phone>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="settings"
+        title="Профиль и настройки"
+        subtitle="Семейный бюджет, валюты, импорт, уведомления"
+      >
+        <DCArtboard id="s-1" label="Профиль" width={FRAME_W} height={FRAME_H}>
+          <Phone><SettingsScreen /></Phone>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

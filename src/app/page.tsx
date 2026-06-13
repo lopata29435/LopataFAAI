@@ -1,143 +1,150 @@
-import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
-import { getDb, schema } from "@/db";
-import { getAccountsWithBalances } from "@/lib/balances";
-import { formatMinor } from "@/lib/money";
+import { getDashboard } from "@/lib/dashboard";
 import { isAiEnabled } from "@/lib/lemonade";
-import { EntryForm } from "@/components/EntryForm";
+import { BottomNav } from "@/components/BottomNav";
 import { TxList } from "@/components/TxList";
 
 export const dynamic = "force-dynamic";
 
-function startOfMonth(): Date {
-  const d = new Date();
-  d.setDate(1);
-  d.setHours(0, 0, 0, 0);
-  return d;
+const fmt = (minor: number) => (minor / 100).toLocaleString("ru-RU", { maximumFractionDigits: 0 });
+
+function Spark({ values, stroke }: { values: number[]; stroke: string }) {
+  const w = 50;
+  const h = 18;
+  if (values.length < 2) return null;
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
+  const pts = values
+    .map((v, i) => {
+      const x = (i / (values.length - 1)) * w;
+      const y = h - ((v - min) / (max - min || 1)) * h;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: "block" }}>
+      <polyline points={pts} fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
+const toneColor: Record<string, string> = {
+  positive: "var(--positive)",
+  warm: "var(--warm)",
+  neutral: "var(--text-mute)",
+};
+
 export default async function Home() {
-  const db = getDb();
+  const { stats, spend7, topCategories, recent, accountsForForms, leafCategories } = await getDashboard(
+    process.env.BASE_CURRENCY ?? "RUB",
+  );
 
-  const balances = await getAccountsWithBalances();
-  const totalMinor = balances.reduce((a, b) => a + b.balanceMinor, 0);
-  const accountsForForms = balances.map((b) => ({ id: b.id, name: b.name, currency: b.currency }));
+  const monthLabel = new Date().toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+  const month = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
 
-  const allCats = await db
-    .select({
-      id: schema.categories.id,
-      name: schema.categories.name,
-      icon: schema.categories.icon,
-      kind: schema.categories.kind,
-      parentId: schema.categories.parentId,
-      sortOrder: schema.categories.sortOrder,
-    })
-    .from(schema.categories)
-    .where(eq(schema.categories.isArchived, false))
-    .orderBy(schema.categories.sortOrder);
-  const parentIds = new Set(allCats.filter((c) => c.parentId).map((c) => c.parentId));
-  const leafCategories = allCats
-    .filter((c) => c.kind !== "transfer" && !parentIds.has(c.id))
-    .map((c) => ({ id: c.id, name: c.name, icon: c.icon, kind: c.kind }));
-
-  const counterAcc = alias(schema.accounts, "counter_acc");
-  const recentRaw = await db
-    .select({
-      id: schema.transactions.id,
-      amountMinor: schema.transactions.amountMinor,
-      currency: schema.transactions.currency,
-      type: schema.transactions.type,
-      datetime: schema.transactions.datetime,
-      note: schema.transactions.note,
-      categoryId: schema.transactions.categoryId,
-      accountId: schema.transactions.accountId,
-      counterAccountId: schema.transactions.counterAccountId,
-      categoryName: schema.categories.name,
-      categoryIcon: schema.categories.icon,
-      accountName: schema.accounts.name,
-      counterAccountName: counterAcc.name,
-    })
-    .from(schema.transactions)
-    .leftJoin(schema.categories, eq(schema.categories.id, schema.transactions.categoryId))
-    .leftJoin(schema.accounts, eq(schema.accounts.id, schema.transactions.accountId))
-    .leftJoin(counterAcc, eq(counterAcc.id, schema.transactions.counterAccountId))
-    .where(isNull(schema.transactions.deletedAt))
-    .orderBy(desc(schema.transactions.datetime))
-    .limit(30);
-  const recent = recentRaw.map((r) => ({ ...r, datetime: r.datetime.toISOString() }));
-
-  const summary = await db
-    .select({
-      categoryName: schema.categories.name,
-      categoryIcon: schema.categories.icon,
-      total: sql<string>`sum(${schema.transactions.amountMinor})`,
-    })
-    .from(schema.transactions)
-    .leftJoin(schema.categories, eq(schema.categories.id, schema.transactions.categoryId))
-    .where(
-      and(
-        isNull(schema.transactions.deletedAt),
-        eq(schema.transactions.type, "expense"),
-        gte(schema.transactions.datetime, startOfMonth()),
-      ),
-    )
-    .groupBy(schema.categories.name, schema.categories.icon)
-    .orderBy(desc(sql`sum(${schema.transactions.amountMinor})`));
-  const summaryRows = summary.map((s) => ({
-    name: s.categoryName ?? "Без категории",
-    icon: s.categoryIcon ?? "•",
-    total: Number(s.total ?? 0),
-  }));
-  const monthTotal = summaryRows.reduce((a, s) => a + s.total, 0);
+  const barMax = Math.max(...spend7.map((s) => s.valueMinor), 1);
+  const hotIdx = spend7.reduce((best, s, i, arr) => (s.valueMinor > arr[best].valueMinor ? i : best), 0);
+  const avg7 = Math.round(spend7.reduce((a, s) => a + s.valueMinor, 0) / 7);
 
   return (
-    <main className="container">
-      <h1>Финансы</h1>
+    <div className="app">
+      <header className="appbar">
+        <div className="avatar">Я</div>
+        <div className="grow">
+          <div className="title">Привет</div>
+          <div className="sub">{month}</div>
+        </div>
+        <span className="chip">RUB</span>
+      </header>
 
-      <EntryForm accounts={accountsForForms} categories={leafCategories} aiEnabled={isAiEnabled()} />
-
-      <div className="accounts-strip mt">
-        {balances.map((b) => (
-          <div className="acct" key={b.id}>
-            <div className="acct-name muted small">{b.name}</div>
-            <div className="acct-bal">{formatMinor(b.balanceMinor, b.currency)}</div>
+      <div className="content">
+        {/* Hero — goals empty state (until goals ship) */}
+        <section className="hero">
+          <div className="annot warm">Цели · копилки</div>
+          <div className="big">Поставь первую цель</div>
+          <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+            Будем копить вместе и подсвечивать ближайшую цель прямо здесь.
           </div>
-        ))}
-        {balances.length > 1 && (
-          <div className="acct total">
-            <div className="acct-name muted small">Всего</div>
-            <div className="acct-bal">{formatMinor(totalMinor)}</div>
-          </div>
-        )}
-      </div>
+          <div className="cta">+ Создать копилку</div>
+        </section>
 
-      <h2>Этот месяц · {formatMinor(monthTotal)}</h2>
-      <div className="card">
-        {summaryRows.length === 0 ? (
-          <div className="muted small">Пока нет расходов в этом месяце.</div>
-        ) : (
-          summaryRows.slice(0, 8).map((s) => (
-            <div className="sum-row" key={s.name}>
-              <span style={{ width: 22 }}>{s.icon}</span>
-              <span style={{ minWidth: 120 }}>{s.name}</span>
-              <span className="sum-bar-track">
-                <span
-                  className="sum-bar-fill"
-                  style={{ width: `${monthTotal ? Math.round((s.total / monthTotal) * 100) : 0}%` }}
-                />
-              </span>
-              <span className="small right" style={{ minWidth: 90 }}>
-                {formatMinor(s.total)}
-              </span>
+        {/* Stats 2×2 */}
+        <div className="stat-grid">
+          {stats.map((s) => (
+            <div className="stat-card" key={s.label}>
+              <div className="annot">{s.label}</div>
+              <div className="v num">
+                {fmt(s.valueMinor)} <small>₽</small>
+              </div>
+              <div className="foot">
+                {s.deltaPct != null ? (
+                  <span className="delta" style={{ color: toneColor[s.tone] }}>
+                    {s.deltaPct > 0 ? "+" : ""}
+                    {s.deltaPct}%
+                  </span>
+                ) : (
+                  <span />
+                )}
+                {s.spark.length > 1 && <Spark values={s.spark} stroke={toneColor[s.tone]} />}
+              </div>
             </div>
-          ))
-        )}
+          ))}
+        </div>
+
+        {/* 7-day spend bars */}
+        <div className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>Траты за 7 дней</div>
+            <div className="muted" style={{ fontSize: 11 }}>сред. {fmt(avg7)} ₽/день</div>
+          </div>
+          <div className="bars">
+            {spend7.map((s, i) => (
+              <div className="col" key={i}>
+                <div
+                  className={"bar" + (i === hotIdx && s.valueMinor > 0 ? " hot" : "")}
+                  style={{ height: `${Math.max(4, Math.round((s.valueMinor / barMax) * 52))}px` }}
+                />
+                <div className="d">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top categories */}
+        <div className="card">
+          <div className="section-head" style={{ padding: 0, marginBottom: 12 }}>
+            <span className="t">Топ категорий</span>
+            <span className="a">этот месяц</span>
+          </div>
+          {topCategories.length === 0 ? (
+            <div className="muted" style={{ fontSize: 13 }}>Пока нет расходов в этом месяце.</div>
+          ) : (
+            topCategories.map((c) => (
+              <div className="cat-row" key={c.name}>
+                <span className="cat-dot">{c.icon ?? "•"}</span>
+                <div className="meta">
+                  <div className="line1">
+                    <span className="name">{c.name}</span>
+                    <span className="amt num">{fmt(c.valueMinor)} ₽</span>
+                  </div>
+                  <div className="progress">
+                    <span style={{ width: `${Math.round(c.pct * 100)}%` }} />
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Recent */}
+        <div>
+          <div className="day-head">
+            <span className="t">Последние операции</span>
+          </div>
+          <TxList rows={recent} accounts={accountsForForms} categories={leafCategories} />
+        </div>
       </div>
 
-      <h2>Последние операции</h2>
-      <div className="card">
-        <TxList rows={recent} accounts={accountsForForms} categories={leafCategories} />
-      </div>
-    </main>
+      <BottomNav accounts={accountsForForms} categories={leafCategories} aiEnabled={isAiEnabled()} />
+    </div>
   );
 }

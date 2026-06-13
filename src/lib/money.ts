@@ -6,6 +6,7 @@ export function formatMinor(minor: number, currency = "RUB"): string {
     return new Intl.NumberFormat("ru-RU", {
       style: "currency",
       currency,
+      minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     }).format(major);
   } catch {

@@ -36,7 +36,7 @@ export function EditTxModal({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const [amount, setAmount] = useState((tx.amountMinor / 100).toString());
+  const [amount, setAmount] = useState((tx.amountMinor / 100).toString().replace(".", ","));
   const [type, setType] = useState<TxType>(tx.type);
   const [accountId, setAccountId] = useState(tx.accountId);
   const [counterAccountId, setCounterAccountId] = useState(
@@ -77,12 +77,12 @@ export function EditTxModal({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    setBusy(false);
     if (res.ok) {
-      onClose();
       router.refresh();
+      onClose();
     } else {
       setMsg("Ошибка сохранения");
+      setBusy(false);
     }
   }
 
@@ -90,64 +90,49 @@ export function EditTxModal({
     if (!confirm("Удалить операцию?")) return;
     setBusy(true);
     const res = await fetch(`/api/transactions/${tx.id}`, { method: "DELETE" });
-    setBusy(false);
     if (res.ok) {
-      onClose();
       router.refresh();
+      onClose();
     } else {
       setMsg("Ошибка удаления");
+      setBusy(false);
     }
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="row" style={{ justifyContent: "space-between" }}>
-          <strong>Операция</strong>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Закрыть">
-            ✕
-          </button>
+    <div className="backdrop" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="grab" />
+        <div className="sheet-head">
+          <div className="t">Операция</div>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Закрыть">✕</button>
         </div>
 
-        <input
-          className="amount-input mt"
-          inputMode="decimal"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-        />
+        <div className="field" style={{ marginTop: 4 }}>
+          <label>Сумма, ₽</label>
+          <input className="input num" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        </div>
 
-        <div className="seg">
-          {(["expense", "income", "transfer"] as const).map((t) => (
-            <button type="button" key={t} className={type === t ? "active" : ""} onClick={() => setType(t)}>
-              {t === "expense" ? "Расход" : t === "income" ? "Доход" : "Перевод"}
+        <div className="seg mt">
+          {(["expense", "income", "transfer"] as const).map((tt) => (
+            <button type="button" key={tt} className={type === tt ? "active" : ""} onClick={() => setType(tt)}>
+              {tt === "expense" ? "Расход" : tt === "income" ? "Доход" : "Перевод"}
             </button>
           ))}
         </div>
 
         <div className="row mt">
-          <div className="grow">
-            <label className="muted small">{type === "transfer" ? "Со счёта" : "Счёт"}</label>
-            <select className="text-input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
+          <div className="field grow" style={{ marginTop: 0 }}>
+            <label>{type === "transfer" ? "Со счёта" : "Счёт"}</label>
+            <select className="input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </div>
           {type === "transfer" && (
-            <div className="grow">
-              <label className="muted small">На счёт</label>
-              <select
-                className="text-input"
-                value={counterAccountId}
-                onChange={(e) => setCounterAccountId(e.target.value)}
-              >
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
+            <div className="field grow" style={{ marginTop: 0 }}>
+              <label>На счёт</label>
+              <select className="input" value={counterAccountId} onChange={(e) => setCounterAccountId(e.target.value)}>
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </div>
           )}
@@ -159,26 +144,21 @@ export function EditTxModal({
               <button
                 type="button"
                 key={c.id}
-                className={"chip" + (categoryId === c.id ? " active" : "")}
+                className={"cchip" + (categoryId === c.id ? " on" : "")}
                 onClick={() => setCategoryId(categoryId === c.id ? null : c.id)}
               >
-                {(c.icon ? c.icon + " " : "") + c.name}
+                <span>{(c.icon ? c.icon + " " : "") + c.name}</span>
               </button>
             ))}
           </div>
         )}
 
-        <div className="mt">
-          <label className="muted small">Дата</label>
-          <input type="date" className="text-input" value={date} onChange={(e) => setDate(e.target.value)} />
+        <div className="field">
+          <label>Дата</label>
+          <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
 
-        <input
-          className="text-input mt"
-          placeholder="Заметка"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-        />
+        <input className="input mt" placeholder="Заметка" value={note} onChange={(e) => setNote(e.target.value)} />
 
         {msg && <div className="msg err">{msg}</div>}
 
@@ -186,9 +166,7 @@ export function EditTxModal({
           <button type="button" className="btn btn-primary grow" disabled={busy} onClick={save}>
             {busy ? "…" : "Сохранить"}
           </button>
-          <button type="button" className="btn btn-danger" disabled={busy} onClick={remove}>
-            Удалить
-          </button>
+          <button type="button" className="btn btn-danger" disabled={busy} onClick={remove}>Удалить</button>
         </div>
       </div>
     </div>
