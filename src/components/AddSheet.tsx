@@ -48,7 +48,7 @@ export function AddSheet({
       if (k === "⌫") return a.slice(0, -1);
       if (k === ",") return a.includes(",") || a === "" ? a : a + ",";
       const dec = a.split(",")[1];
-      if (dec && dec.length >= 2) return a; // max 2 decimals
+      if (dec && dec.length >= 2) return a;
       return a + k;
     });
   }
@@ -111,15 +111,15 @@ export function AddSheet({
 
   return (
     <div className="backdrop" onClick={onClose}>
-      <div className="sheet sheet-calc" onClick={(e) => e.stopPropagation()}>
+      <div className="add-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="grab" />
         <div className="sheet-head">
           <div className="t">Новая операция</div>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Закрыть">✕</button>
         </div>
 
-        {/* Settings — scroll above the pinned amount + numpad */}
-        <div className="sheet-scroll">
+        {/* Settings (scroll on mobile, full form on desktop) */}
+        <div className="add-body">
           {aiEnabled && (
             <div className="row">
               <input
@@ -133,7 +133,19 @@ export function AddSheet({
             </div>
           )}
 
-          <div className="seg" style={{ marginTop: aiEnabled ? 12 : 2 }}>
+          {/* Desktop amount field (mobile uses the numpad below) */}
+          <div className="field amount-desktop" style={{ marginTop: aiEnabled ? 12 : 4 }}>
+            <label>Сумма, ₽</label>
+            <input
+              className="input num amount-desktop-input"
+              inputMode="decimal"
+              placeholder="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </div>
+
+          <div className="seg" style={{ marginTop: 12 }}>
             <button type="button" className={type === "expense" ? "active" : ""} onClick={() => setType("expense")}>Расход</button>
             <button type="button" className={type === "income" ? "active" : ""} onClick={() => setType("income")}>Доход</button>
             <button type="button" className={type === "transfer" ? "active" : ""} onClick={() => setType("transfer")}>Перевод</button>
@@ -174,14 +186,14 @@ export function AddSheet({
           <input className="input mt" placeholder="Заметка (необязательно)" value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
 
-        {/* Pinned bottom: amount sits right above the numpad */}
-        <div className="sheet-pad">
+        {/* Footer: amount+numpad pinned on mobile; just save on desktop */}
+        <div className="add-foot">
           {msg && <div className={"msg " + msg.kind} style={{ padding: "2px 2px 4px" }}>{msg.text}</div>}
-          <div className="amount-display">
+          <div className="amount-display mobile-amount">
             <div className="annot">Сумма</div>
             <div className="v num">{displayAmount(amount)} <small>₽</small></div>
           </div>
-          <div className="numpad">
+          <div className="numpad mobile-numpad">
             {[["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], [",", "0", "⌫"]].map((row, i) => (
               <div className="row" key={i}>
                 {row.map((k) => (
@@ -190,7 +202,7 @@ export function AddSheet({
               </div>
             ))}
           </div>
-          <button type="button" className="btn btn-primary mt" disabled={busy} onClick={submit}>
+          <button type="button" className="btn btn-primary" disabled={busy} onClick={submit}>
             {busy ? "…" : type === "transfer" ? "Перевести" : "Сохранить"}
           </button>
         </div>
