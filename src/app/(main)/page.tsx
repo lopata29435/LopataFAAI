@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { getDashboard } from "@/lib/dashboard";
+import { getTopGoal } from "@/lib/goals";
 import { TxList } from "@/components/TxList";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +32,7 @@ export default async function Dashboard() {
   const { stats, spend7, topCategories, recent, accountsForForms, leafCategories } = await getDashboard(
     process.env.BASE_CURRENCY ?? "RUB",
   );
+  const topGoal = await getTopGoal();
 
   const monthLabel = new Date().toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
   const month = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
@@ -49,14 +52,35 @@ export default async function Dashboard() {
       </header>
 
       <div className="dash">
-        <section className="hero">
-          <div className="annot warm">Цели · копилки</div>
-          <div className="big">Поставь первую цель</div>
-          <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
-            Будем копить вместе и подсвечивать ближайшую цель прямо здесь.
-          </div>
-          <div className="cta">+ Создать копилку</div>
-        </section>
+        {topGoal ? (
+          <Link href="/goals" className="hero hero-link">
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div className="annot warm">Ближайшая цель</div>
+                <div className="big">{(topGoal.icon ? topGoal.icon + " " : "") + topGoal.name}</div>
+              </div>
+              <div style={{ padding: "4px 10px", borderRadius: 100, background: "rgba(255,181,154,.18)", color: "var(--warm)", fontSize: 11, fontWeight: 600 }}>
+                {Math.round(topGoal.pct * 100)}%
+              </div>
+            </div>
+            <div className="row" style={{ alignItems: "baseline", gap: 6, marginTop: 12, marginBottom: 6 }}>
+              <span className="num" style={{ fontSize: 24, fontWeight: 600 }}>{fmt(topGoal.currentMinor)}</span>
+              <span className="muted small">/ {fmt(topGoal.targetMinor)} ₽</span>
+            </div>
+            <div className="progress" style={{ height: 8 }}>
+              <span style={{ width: `${Math.round(topGoal.pct * 100)}%`, background: "var(--warm)" }} />
+            </div>
+          </Link>
+        ) : (
+          <Link href="/goals" className="hero hero-link">
+            <div className="annot warm">Цели · копилки</div>
+            <div className="big">Поставь первую цель</div>
+            <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+              Будем подсвечивать ближайшую цель прямо здесь.
+            </div>
+            <div className="cta">+ Создать копилку</div>
+          </Link>
+        )}
 
         <div className="stat-grid">
           {stats.map((s) => (

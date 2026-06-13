@@ -12,10 +12,13 @@ const NAV = [
   { href: "/", label: "Главная", icon: "🏠" },
   { href: "/history", label: "История", icon: "🧾" },
   { href: "/analytics", label: "Аналитика", icon: "📊" },
+  { href: "/budgets", label: "Бюджеты", icon: "🎯" },
+  { href: "/goals", label: "Копилки", icon: "🐷" },
   { href: "/accounts", label: "Счета", icon: "💳" },
+  { href: "/investments", label: "Инвестиции", icon: "📈" },
   { href: "/settings", label: "Профиль", icon: "👤" },
 ];
-const SOON = ["Бюджеты", "Копилки", "Инвестиции", "Семья"];
+const SOON = ["Семья"];
 
 export function AppShell({
   accounts,

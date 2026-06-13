@@ -126,3 +126,46 @@ export const envelopes = pgTable("envelopes", {
   target: envelopeTarget("target").notNull().default("common"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// --- savings goals (копилки) -----------------------------------------------
+export const goals = pgTable("goals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ownerId: uuid("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  householdId: uuid("household_id").references(() => households.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  targetMinor: bigint("target_minor", { mode: "number" }).notNull(),
+  currentMinor: bigint("current_minor", { mode: "number" }).notNull().default(0),
+  currency: char("currency", { length: 3 }).notNull().default("RUB"),
+  icon: text("icon"),
+  color: text("color"),
+  deadline: date("deadline"),
+  isArchived: boolean("is_archived").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// --- monthly budgets (лимиты) ----------------------------------------------
+export const budgets = pgTable("budgets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ownerId: uuid("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  householdId: uuid("household_id").references(() => households.id, { onDelete: "set null" }),
+  categoryId: uuid("category_id").references(() => categories.id, { onDelete: "cascade" }),
+  limitMinor: bigint("limit_minor", { mode: "number" }).notNull(),
+  currency: char("currency", { length: 3 }).notNull().default("RUB"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// --- investment positions (вложения) ---------------------------------------
+export const holdings = pgTable("holdings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ownerId: uuid("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  accountId: uuid("account_id").references(() => accounts.id, { onDelete: "set null" }),
+  symbol: text("symbol").notNull(),
+  name: text("name"),
+  quantity: numeric("quantity", { precision: 24, scale: 8 }).notNull(),
+  avgPriceMinor: bigint("avg_price_minor", { mode: "number" }).notNull(),
+  lastPriceMinor: bigint("last_price_minor", { mode: "number" }).notNull().default(0),
+  currency: char("currency", { length: 3 }).notNull().default("RUB"),
+  isArchived: boolean("is_archived").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

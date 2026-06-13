@@ -374,3 +374,10 @@ button { font-family: inherit; }
   .mobile-amount, .mobile-numpad { display: none; }
   .add-foot { border-top: none; padding-top: 0; }
 }
+
+/* misc */
+.link-btn { background: none; border: none; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; }
+.link-btn.accent { color: var(--accent); }
+.bud-row { width: 100%; text-align: left; background: none; border: none; border-bottom: 1px solid var(--divider); cursor: pointer; font: inherit; color: inherit; padding: 12px 0; }
+.bud-row:last-child { border-bottom: none; }
+.hero-link { display: block; text-decoration: none; color: inherit; }
