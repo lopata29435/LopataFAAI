@@ -1,5 +1,6 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
+import { txVisible } from "./scope";
 
 export type AccountBalance = {
   id: string;
@@ -32,7 +33,7 @@ export async function getAccountsWithBalances(): Promise<AccountBalance[]> {
       transferOut: sql<string>`coalesce(sum(case when ${schema.transactions.type} = 'transfer' then ${schema.transactions.amountMinor} else 0 end), 0)`,
     })
     .from(schema.transactions)
-    .where(isNull(schema.transactions.deletedAt))
+    .where(and(isNull(schema.transactions.deletedAt), txVisible))
     .groupBy(schema.transactions.accountId);
 
   const transfersIn = await db
@@ -41,7 +42,7 @@ export async function getAccountsWithBalances(): Promise<AccountBalance[]> {
       amt: sql<string>`coalesce(sum(${schema.transactions.amountMinor}), 0)`,
     })
     .from(schema.transactions)
-    .where(and(isNull(schema.transactions.deletedAt), eq(schema.transactions.type, "transfer")))
+    .where(and(isNull(schema.transactions.deletedAt), txVisible, eq(schema.transactions.type, "transfer")))
     .groupBy(schema.transactions.counterAccountId);
 
   const flowMap = new Map(flows.map((f) => [f.accountId, f]));

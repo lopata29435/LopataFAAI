@@ -2,6 +2,7 @@ import { and, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { getDb, schema } from "@/db";
 import { getAccountsWithBalances } from "./balances";
+import { txVisible } from "./scope";
 import type { EditableTx } from "@/components/EditTxModal";
 
 export type DashStat = {
@@ -48,7 +49,7 @@ export async function getDashboard(baseCurrency = "RUB") {
         expense: sql<string>`coalesce(sum(case when ${t.type} = 'expense' then ${t.amountMinor} else 0 end), 0)`,
       })
       .from(t)
-      .where(and(isNull(t.deletedAt), gte(t.datetime, from), lt(t.datetime, to)));
+      .where(and(isNull(t.deletedAt), txVisible, gte(t.datetime, from), lt(t.datetime, to)));
     return { income: Number(r?.income ?? 0), expense: Number(r?.expense ?? 0) };
   }
   const cur = await monthSums(thisStart, nextStart);
@@ -66,7 +67,7 @@ export async function getDashboard(baseCurrency = "RUB") {
       total: sql<string>`coalesce(sum(${t.amountMinor}), 0)`,
     })
     .from(t)
-    .where(and(isNull(t.deletedAt), eq(t.type, "expense"), gte(t.datetime, weekStart)))
+    .where(and(isNull(t.deletedAt), txVisible, eq(t.type, "expense"), gte(t.datetime, weekStart)))
     .groupBy(sql`1`);
   const dayMap = new Map(dayRows.map((r) => [r.d, Number(r.total)]));
   const ru = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
@@ -81,7 +82,7 @@ export async function getDashboard(baseCurrency = "RUB") {
     .select({ name: cat.name, icon: cat.icon, total: sql<string>`sum(${t.amountMinor})` })
     .from(t)
     .leftJoin(cat, eq(cat.id, t.categoryId))
-    .where(and(isNull(t.deletedAt), eq(t.type, "expense"), gte(t.datetime, thisStart), lt(t.datetime, nextStart)))
+    .where(and(isNull(t.deletedAt), txVisible, eq(t.type, "expense"), gte(t.datetime, thisStart), lt(t.datetime, nextStart)))
     .groupBy(cat.name, cat.icon)
     .orderBy(desc(sql`sum(${t.amountMinor})`))
     .limit(4);
@@ -119,15 +120,22 @@ export async function getDashboard(baseCurrency = "RUB") {
       categoryIcon: cat.icon,
       accountName: schema.accounts.name,
       counterAccountName: counterAcc.name,
+      scope: t.scope,
+      visibility: t.visibility,
+      hiddenUntil: t.hiddenUntil,
     })
     .from(t)
     .leftJoin(cat, eq(cat.id, t.categoryId))
     .leftJoin(schema.accounts, eq(schema.accounts.id, t.accountId))
     .leftJoin(counterAcc, eq(counterAcc.id, t.counterAccountId))
-    .where(isNull(t.deletedAt))
+    .where(and(isNull(t.deletedAt), txVisible))
     .orderBy(desc(t.datetime))
     .limit(30);
-  const recent: EditableTx[] = recentRaw.map((r) => ({ ...r, datetime: r.datetime.toISOString() }));
+  const recent: EditableTx[] = recentRaw.map((r) => ({
+    ...r,
+    datetime: r.datetime.toISOString(),
+    hiddenUntil: r.hiddenUntil ? r.hiddenUntil.toISOString() : null,
+  }));
 
   const stats: DashStat[] = [
     { label: "Баланс", valueMinor: totalMinor, currency: baseCurrency, deltaPct: null, tone: "neutral", spark: [] },
@@ -171,6 +179,9 @@ export async function getHistory(limit = 250): Promise<EditableTx[]> {
       categoryIcon: cat.icon,
       accountName: schema.accounts.name,
       counterAccountName: ca.name,
+      scope: t.scope,
+      visibility: t.visibility,
+      hiddenUntil: t.hiddenUntil,
     })
     .from(t)
     .leftJoin(cat, eq(cat.id, t.categoryId))
@@ -179,7 +190,11 @@ export async function getHistory(limit = 250): Promise<EditableTx[]> {
     .where(isNull(t.deletedAt))
     .orderBy(desc(t.datetime))
     .limit(limit);
-  return rows.map((r) => ({ ...r, datetime: r.datetime.toISOString() }));
+  return rows.map((r) => ({
+    ...r,
+    datetime: r.datetime.toISOString(),
+    hiddenUntil: r.hiddenUntil ? r.hiddenUntil.toISOString() : null,
+  }));
 }
 
 const RU_MONTHS = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
@@ -196,7 +211,7 @@ export async function getAnalytics() {
     .select({ name: cat.name, icon: cat.icon, total: sql<string>`sum(${t.amountMinor})` })
     .from(t)
     .leftJoin(cat, eq(cat.id, t.categoryId))
-    .where(and(isNull(t.deletedAt), eq(t.type, "expense"), gte(t.datetime, thisStart), lt(t.datetime, nextStart)))
+    .where(and(isNull(t.deletedAt), txVisible, eq(t.type, "expense"), gte(t.datetime, thisStart), lt(t.datetime, nextStart)))
     .groupBy(cat.name, cat.icon)
     .orderBy(desc(sql`sum(${t.amountMinor})`));
   const monthExpense = catRows.reduce((a, r) => a + Number(r.total), 0);
@@ -217,7 +232,7 @@ export async function getAnalytics() {
       expense: sql<string>`coalesce(sum(case when ${t.type} = 'expense' then ${t.amountMinor} else 0 end), 0)`,
     })
     .from(t)
-    .where(and(isNull(t.deletedAt), gte(t.datetime, sixStart)))
+    .where(and(isNull(t.deletedAt), txVisible, gte(t.datetime, sixStart)))
     .groupBy(sql`1`);
   const trendMap = new Map(trendRows.map((r) => [r.ym, r]));
   const trend: TrendMonth[] = Array.from({ length: 6 }, (_, i) => {

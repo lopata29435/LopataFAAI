@@ -13,6 +13,9 @@ const UpdateTx = z.object({
   counterAccountId: z.string().uuid().nullable().optional(),
   datetime: z.string().datetime().optional(),
   note: z.string().max(500).nullable().optional(),
+  scope: z.enum(["personal", "common"]).optional(),
+  visibility: z.enum(["normal", "hidden"]).optional(),
+  hiddenUntil: z.string().nullable().optional(),
 });
 
 type Params = { params: Promise<{ id: string }> };
@@ -35,6 +38,18 @@ export async function PATCH(req: Request, { params }: Params) {
   if (d.counterAccountId !== undefined) patch.counterAccountId = d.counterAccountId;
   if (d.datetime !== undefined) patch.datetime = new Date(d.datetime);
   if (d.note !== undefined) patch.note = d.note;
+  if (d.scope !== undefined) patch.scope = d.scope;
+  if (d.visibility !== undefined) {
+    patch.visibility = d.visibility;
+    if (d.visibility === "hidden") {
+      patch.hiddenUntil = d.hiddenUntil ? new Date(d.hiddenUntil) : null;
+      patch.revealedAt = null;
+    } else {
+      patch.revealedAt = new Date();
+    }
+  } else if (d.hiddenUntil !== undefined) {
+    patch.hiddenUntil = d.hiddenUntil ? new Date(d.hiddenUntil) : null;
+  }
 
   // Keep the model consistent: transfers carry no category; non-transfers carry no counter account.
   if (d.type === "transfer") patch.categoryId = null;

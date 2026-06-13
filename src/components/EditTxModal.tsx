@@ -18,6 +18,9 @@ export type EditableTx = {
   categoryIcon?: string | null;
   accountName?: string | null;
   counterAccountName?: string | null;
+  scope?: "personal" | "common";
+  visibility?: "normal" | "hidden";
+  hiddenUntil?: string | null;
 };
 
 type Account = { id: string; name: string; currency: string };
@@ -45,6 +48,9 @@ export function EditTxModal({
   const [categoryId, setCategoryId] = useState<string | null>(tx.categoryId);
   const [date, setDate] = useState(tx.datetime.slice(0, 10));
   const [note, setNote] = useState(tx.note ?? "");
+  const [scope, setScope] = useState<"personal" | "common">(tx.scope ?? "personal");
+  const [hidden, setHidden] = useState(tx.visibility === "hidden");
+  const [hiddenUntil, setHiddenUntil] = useState(tx.hiddenUntil ? tx.hiddenUntil.slice(0, 10) : "");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -64,6 +70,9 @@ export function EditTxModal({
       accountId,
       note: note || null,
       datetime: new Date(date + "T12:00:00").toISOString(),
+      scope,
+      visibility: hidden ? "hidden" : "normal",
+      hiddenUntil: hidden ? hiddenUntil || null : null,
     };
     if (type === "transfer") {
       payload.counterAccountId = counterAccountId;
@@ -159,6 +168,19 @@ export function EditTxModal({
         </div>
 
         <input className="input mt" placeholder="Заметка" value={note} onChange={(e) => setNote(e.target.value)} />
+
+        <div className="seg mt">
+          <button type="button" className={scope === "personal" ? "active" : ""} onClick={() => setScope("personal")}>Личное</button>
+          <button type="button" className={scope === "common" ? "active" : ""} onClick={() => setScope("common")}>Общее (семья)</button>
+        </div>
+
+        <label className="hide-toggle mt">
+          <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} />
+          <span className="grow">Скрыть от семьи{hidden ? " до даты:" : ""}</span>
+          {hidden && (
+            <input type="date" className="input" style={{ width: "auto" }} value={hiddenUntil} onChange={(e) => setHiddenUntil(e.target.value)} />
+          )}
+        </label>
 
         {msg && <div className="msg err">{msg}</div>}
 

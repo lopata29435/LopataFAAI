@@ -90,6 +90,7 @@ export const transactions = pgTable("transactions", {
   scope: txScope("scope").notNull().default("personal"),
   visibility: txVisibility("visibility").notNull().default("normal"),
   hiddenUntil: timestamp("hidden_until", { withTimezone: true }),
+  revealedAt: timestamp("revealed_at", { withTimezone: true }),
   transferGroupId: uuid("transfer_group_id"),
   externalId: text("external_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

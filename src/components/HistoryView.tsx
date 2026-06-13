@@ -6,13 +6,14 @@ import { EditTxModal, type EditableTx } from "./EditTxModal";
 
 type Account = { id: string; name: string; currency: string };
 type Category = { id: string; name: string; icon: string | null; kind: string };
-type Filter = "all" | "expense" | "income" | "transfer";
+type Filter = "all" | "expense" | "income" | "transfer" | "hidden";
 
 const FILTERS: [Filter, string][] = [
   ["all", "Все"],
   ["expense", "Расход"],
   ["income", "Доход"],
   ["transfer", "Переводы"],
+  ["hidden", "Скрытые"],
 ];
 
 export function HistoryView({
@@ -30,8 +31,16 @@ export function HistoryView({
 
   const groups = useMemo(() => {
     const ql = q.trim().toLowerCase();
+    const isHidden = (r: EditableTx) =>
+      r.visibility === "hidden" && (!r.hiddenUntil || new Date(r.hiddenUntil) > new Date());
     const filtered = rows.filter((r) => {
-      if (filter !== "all" && r.type !== filter) return false;
+      const eh = isHidden(r);
+      if (filter === "hidden") {
+        if (!eh) return false;
+      } else {
+        if (eh) return false;
+        if (filter !== "all" && r.type !== filter) return false;
+      }
       if (!ql) return true;
       const hay = [r.categoryName, r.note, r.accountName, r.counterAccountName]
         .filter(Boolean)

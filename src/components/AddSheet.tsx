@@ -32,6 +32,7 @@ export function AddSheet({
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
   const [counterAccountId, setCounterAccountId] = useState(accounts[1]?.id ?? accounts[0]?.id ?? "");
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [scope, setScope] = useState<"personal" | "common">("personal");
   const [note, setNote] = useState("");
   const [smart, setSmart] = useState("");
   const [busy, setBusy] = useState(false);
@@ -66,7 +67,7 @@ export function AddSheet({
       const payload =
         type === "transfer"
           ? { accountId, counterAccountId, amountMinor: minor, type, note: note || null }
-          : { accountId, amountMinor: minor, type, categoryId, note: note || null };
+          : { accountId, amountMinor: minor, type, categoryId, note: note || null, scope };
       const res = await fetch("/api/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -150,6 +151,13 @@ export function AddSheet({
             <button type="button" className={type === "income" ? "active" : ""} onClick={() => setType("income")}>Доход</button>
             <button type="button" className={type === "transfer" ? "active" : ""} onClick={() => setType("transfer")}>Перевод</button>
           </div>
+
+          {type !== "transfer" && (
+            <div className="seg mt">
+              <button type="button" className={scope === "personal" ? "active" : ""} onClick={() => setScope("personal")}>Личное</button>
+              <button type="button" className={scope === "common" ? "active" : ""} onClick={() => setScope("common")}>Общее (семья)</button>
+            </div>
+          )}
 
           <div className="row mt">
             <div className="field grow" style={{ marginTop: 0 }}>

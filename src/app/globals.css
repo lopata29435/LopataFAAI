@@ -381,3 +381,5 @@ button { font-family: inherit; }
 .bud-row { width: 100%; text-align: left; background: none; border: none; border-bottom: 1px solid var(--divider); cursor: pointer; font: inherit; color: inherit; padding: 12px 0; }
 .bud-row:last-child { border-bottom: none; }
 .hero-link { display: block; text-decoration: none; color: inherit; }
+.hide-toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 4px 0; cursor: pointer; }
+.hide-toggle input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }

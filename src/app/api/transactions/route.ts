@@ -15,6 +15,7 @@ const CreateTx = z
     datetime: z.string().datetime().optional(),
     note: z.string().max(500).nullable().optional(),
     currency: z.string().length(3).optional(),
+    scope: z.enum(["personal", "common"]).optional(),
     source: z.enum(["manual", "ai", "import", "recurring"]).default("manual"),
   })
   .refine((d) => d.type !== "transfer" || (!!d.counterAccountId && d.counterAccountId !== d.accountId), {
@@ -51,6 +52,7 @@ export async function POST(req: Request) {
       datetime: d.datetime ? new Date(d.datetime) : new Date(),
       note: d.note ?? null,
       currency: d.currency ?? process.env.BASE_CURRENCY ?? "RUB",
+      scope: d.scope ?? "personal",
       source: d.source,
     })
     .returning();
