@@ -6,6 +6,7 @@ export type AccountBalance = {
   name: string;
   currency: string;
   type: string;
+  openingBalanceMinor: number;
   balanceMinor: number;
 };
 
@@ -54,6 +55,13 @@ export async function getAccountsWithBalances(): Promise<AccountBalance[]> {
       a.openingBalanceMinor +
       (f ? Number(f.income) - Number(f.expense) - Number(f.transferOut) : 0) +
       (inMap.get(a.id) ?? 0);
-    return { id: a.id, name: a.name, currency: a.currency, type: a.type, balanceMinor };
+    return {
+      id: a.id,
+      name: a.name,
+      currency: a.currency,
+      type: a.type,
+      openingBalanceMinor: a.openingBalanceMinor,
+      balanceMinor,
+    };
   });
 }
