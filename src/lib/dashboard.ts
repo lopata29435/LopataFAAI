@@ -145,3 +145,116 @@ export async function getDashboard(baseCurrency = "RUB") {
 
   return { stats, spend7, topCategories, recent, accountsForForms, leafCategories, monthExpense: cur.expense };
 }
+
+const CAT_COLORS = ["#83D5C6", "#FFB59A", "#7C9C8E", "#C8A47C", "#9B8CCE", "#E08AA0", "#6E8480"];
+
+export type TrendMonth = { label: string; incomeMinor: number; expenseMinor: number };
+
+/** Full transaction feed for the History screen (grouped client-side). */
+export async function getHistory(limit = 250): Promise<EditableTx[]> {
+  const db = getDb();
+  const t = schema.transactions;
+  const cat = schema.categories;
+  const ca = alias(schema.accounts, "hist_counter");
+  const rows = await db
+    .select({
+      id: t.id,
+      amountMinor: t.amountMinor,
+      currency: t.currency,
+      type: t.type,
+      datetime: t.datetime,
+      note: t.note,
+      categoryId: t.categoryId,
+      accountId: t.accountId,
+      counterAccountId: t.counterAccountId,
+      categoryName: cat.name,
+      categoryIcon: cat.icon,
+      accountName: schema.accounts.name,
+      counterAccountName: ca.name,
+    })
+    .from(t)
+    .leftJoin(cat, eq(cat.id, t.categoryId))
+    .leftJoin(schema.accounts, eq(schema.accounts.id, t.accountId))
+    .leftJoin(ca, eq(ca.id, t.counterAccountId))
+    .where(isNull(t.deletedAt))
+    .orderBy(desc(t.datetime))
+    .limit(limit);
+  return rows.map((r) => ({ ...r, datetime: r.datetime.toISOString() }));
+}
+
+const RU_MONTHS = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+
+export async function getAnalytics() {
+  const db = getDb();
+  const t = schema.transactions;
+  const cat = schema.categories;
+  const thisStart = monthStart(0);
+  const nextStart = monthStart(1);
+
+  // Category breakdown for the current month (expense)
+  const catRows = await db
+    .select({ name: cat.name, icon: cat.icon, total: sql<string>`sum(${t.amountMinor})` })
+    .from(t)
+    .leftJoin(cat, eq(cat.id, t.categoryId))
+    .where(and(isNull(t.deletedAt), eq(t.type, "expense"), gte(t.datetime, thisStart), lt(t.datetime, nextStart)))
+    .groupBy(cat.name, cat.icon)
+    .orderBy(desc(sql`sum(${t.amountMinor})`));
+  const monthExpense = catRows.reduce((a, r) => a + Number(r.total), 0);
+  const monthCategories = catRows.slice(0, 7).map((r, i) => ({
+    name: r.name ?? "Без категории",
+    icon: r.icon,
+    valueMinor: Number(r.total),
+    pct: monthExpense ? Number(r.total) / monthExpense : 0,
+    color: CAT_COLORS[i % CAT_COLORS.length],
+  }));
+
+  // 6-month income/expense trend
+  const sixStart = monthStart(-5);
+  const trendRows = await db
+    .select({
+      ym: sql<string>`to_char(date_trunc('month', ${t.datetime}), 'YYYY-MM')`,
+      income: sql<string>`coalesce(sum(case when ${t.type} = 'income' then ${t.amountMinor} else 0 end), 0)`,
+      expense: sql<string>`coalesce(sum(case when ${t.type} = 'expense' then ${t.amountMinor} else 0 end), 0)`,
+    })
+    .from(t)
+    .where(and(isNull(t.deletedAt), gte(t.datetime, sixStart)))
+    .groupBy(sql`1`);
+  const trendMap = new Map(trendRows.map((r) => [r.ym, r]));
+  const trend: TrendMonth[] = Array.from({ length: 6 }, (_, i) => {
+    const d = monthStart(-(5 - i));
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const row = trendMap.get(key);
+    return {
+      label: RU_MONTHS[d.getMonth()],
+      incomeMinor: row ? Number(row.income) : 0,
+      expenseMinor: row ? Number(row.expense) : 0,
+    };
+  });
+
+  const monthIncome = trend[trend.length - 1]?.incomeMinor ?? 0;
+  return { monthCategories, monthExpense, monthIncome, trend };
+}
+
+/** Lightweight accounts + leaf categories for the shell's add-sheet. */
+export async function getFormData() {
+  const db = getDb();
+  const balances = await getAccountsWithBalances();
+  const accountsForForms: AccountLite[] = balances.map((b) => ({ id: b.id, name: b.name, currency: b.currency }));
+  const allCats = await db
+    .select({
+      id: schema.categories.id,
+      name: schema.categories.name,
+      icon: schema.categories.icon,
+      kind: schema.categories.kind,
+      parentId: schema.categories.parentId,
+      sortOrder: schema.categories.sortOrder,
+    })
+    .from(schema.categories)
+    .where(eq(schema.categories.isArchived, false))
+    .orderBy(schema.categories.sortOrder);
+  const parentIds = new Set(allCats.filter((c) => c.parentId).map((c) => c.parentId));
+  const leafCategories: CategoryLite[] = allCats
+    .filter((c) => c.kind !== "transfer" && !parentIds.has(c.id))
+    .map((c) => ({ id: c.id, name: c.name, icon: c.icon, kind: c.kind }));
+  return { accountsForForms, leafCategories };
+}

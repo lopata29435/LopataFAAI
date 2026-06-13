@@ -1,11 +1,14 @@
 import { getDashboard } from "@/lib/dashboard";
-import { isAiEnabled } from "@/lib/lemonade";
-import { BottomNav } from "@/components/BottomNav";
 import { TxList } from "@/components/TxList";
 
 export const dynamic = "force-dynamic";
 
 const fmt = (minor: number) => (minor / 100).toLocaleString("ru-RU", { maximumFractionDigits: 0 });
+const toneColor: Record<string, string> = {
+  positive: "var(--positive)",
+  warm: "var(--warm)",
+  neutral: "var(--text-mute)",
+};
 
 function Spark({ values, stroke }: { values: number[]; stroke: string }) {
   const w = 50;
@@ -14,11 +17,7 @@ function Spark({ values, stroke }: { values: number[]; stroke: string }) {
   const max = Math.max(...values, 1);
   const min = Math.min(...values, 0);
   const pts = values
-    .map((v, i) => {
-      const x = (i / (values.length - 1)) * w;
-      const y = h - ((v - min) / (max - min || 1)) * h;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
+    .map((v, i) => `${((i / (values.length - 1)) * w).toFixed(1)},${(h - ((v - min) / (max - min || 1)) * h).toFixed(1)}`)
     .join(" ");
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: "block" }}>
@@ -27,27 +26,20 @@ function Spark({ values, stroke }: { values: number[]; stroke: string }) {
   );
 }
 
-const toneColor: Record<string, string> = {
-  positive: "var(--positive)",
-  warm: "var(--warm)",
-  neutral: "var(--text-mute)",
-};
-
-export default async function Home() {
+export default async function Dashboard() {
   const { stats, spend7, topCategories, recent, accountsForForms, leafCategories } = await getDashboard(
     process.env.BASE_CURRENCY ?? "RUB",
   );
 
   const monthLabel = new Date().toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
   const month = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
-
   const barMax = Math.max(...spend7.map((s) => s.valueMinor), 1);
   const hotIdx = spend7.reduce((best, s, i, arr) => (s.valueMinor > arr[best].valueMinor ? i : best), 0);
   const avg7 = Math.round(spend7.reduce((a, s) => a + s.valueMinor, 0) / 7);
 
   return (
-    <div className="app">
-      <header className="appbar">
+    <>
+      <header className="appbar mobile-only">
         <div className="avatar">Я</div>
         <div className="grow">
           <div className="title">Привет</div>
@@ -56,8 +48,7 @@ export default async function Home() {
         <span className="chip">RUB</span>
       </header>
 
-      <div className="content">
-        {/* Hero — goals empty state (until goals ship) */}
+      <div className="dash">
         <section className="hero">
           <div className="annot warm">Цели · копилки</div>
           <div className="big">Поставь первую цель</div>
@@ -67,7 +58,6 @@ export default async function Home() {
           <div className="cta">+ Создать копилку</div>
         </section>
 
-        {/* Stats 2×2 */}
         <div className="stat-grid">
           {stats.map((s) => (
             <div className="stat-card" key={s.label}>
@@ -90,61 +80,60 @@ export default async function Home() {
           ))}
         </div>
 
-        {/* 7-day spend bars */}
-        <div className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>Траты за 7 дней</div>
-            <div className="muted" style={{ fontSize: 11 }}>сред. {fmt(avg7)} ₽/день</div>
+        <div className="dash-cols">
+          <div className="card">
+            <div className="card-head">
+              <span className="t">Траты за 7 дней</span>
+              <span className="muted small">сред. {fmt(avg7)} ₽/день</span>
+            </div>
+            <div className="bars">
+              {spend7.map((s, i) => (
+                <div className="col" key={i}>
+                  <div
+                    className={"bar" + (i === hotIdx && s.valueMinor > 0 ? " hot" : "")}
+                    style={{ height: `${Math.max(4, Math.round((s.valueMinor / barMax) * 52))}px` }}
+                  />
+                  <div className="d">{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="bars">
-            {spend7.map((s, i) => (
-              <div className="col" key={i}>
-                <div
-                  className={"bar" + (i === hotIdx && s.valueMinor > 0 ? " hot" : "")}
-                  style={{ height: `${Math.max(4, Math.round((s.valueMinor / barMax) * 52))}px` }}
-                />
-                <div className="d">{s.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Top categories */}
-        <div className="card">
-          <div className="section-head" style={{ padding: 0, marginBottom: 12 }}>
-            <span className="t">Топ категорий</span>
-            <span className="a">этот месяц</span>
-          </div>
-          {topCategories.length === 0 ? (
-            <div className="muted" style={{ fontSize: 13 }}>Пока нет расходов в этом месяце.</div>
-          ) : (
-            topCategories.map((c) => (
-              <div className="cat-row" key={c.name}>
-                <span className="cat-dot">{c.icon ?? "•"}</span>
-                <div className="meta">
-                  <div className="line1">
-                    <span className="name">{c.name}</span>
-                    <span className="amt num">{fmt(c.valueMinor)} ₽</span>
-                  </div>
-                  <div className="progress">
-                    <span style={{ width: `${Math.round(c.pct * 100)}%` }} />
+          <div className="card">
+            <div className="card-head">
+              <span className="t">Топ категорий</span>
+              <span className="muted small">этот месяц</span>
+            </div>
+            {topCategories.length === 0 ? (
+              <div className="muted small">Пока нет расходов в этом месяце.</div>
+            ) : (
+              topCategories.map((c) => (
+                <div className="cat-row" key={c.name}>
+                  <span className="cat-dot">{c.icon ?? "•"}</span>
+                  <div className="meta">
+                    <div className="line1">
+                      <span className="name">{c.name}</span>
+                      <span className="amt num">{fmt(c.valueMinor)} ₽</span>
+                    </div>
+                    <div className="progress">
+                      <span style={{ width: `${Math.round(c.pct * 100)}%` }} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
 
-        {/* Recent */}
         <div>
           <div className="day-head">
             <span className="t">Последние операции</span>
           </div>
-          <TxList rows={recent} accounts={accountsForForms} categories={leafCategories} />
+          <div className="card">
+            <TxList rows={recent} accounts={accountsForForms} categories={leafCategories} />
+          </div>
         </div>
       </div>
-
-      <BottomNav accounts={accountsForForms} categories={leafCategories} aiEnabled={isAiEnabled()} />
-    </div>
+    </>
   );
 }
